@@ -2,8 +2,9 @@ const tile = { w: 34, h: 23 };
 const terrainTile = { w: 6, h: 6 };
 const mapOffset = { x: 0, y: 0 };
 const mapSize = { width: 1350, height: 820 };
+const defaultZoomScale = 1.56;
 const zoomLimits = { min: 1, max: 3 };
-const zoomState = { scale: 1, centerX: mapSize.width / 2, centerY: mapSize.height / 2, dragging: false, dragStart: null };
+const zoomState = { scale: defaultZoomScale, centerX: mapSize.width / 2, centerY: mapSize.height / 2, dragging: false, dragStart: null };
 const mapLayers = { base: null, towns: null };
 const graphDistanceCache = new Map();
 const terrainCellsByTownId = new Map();
@@ -3330,7 +3331,7 @@ function setZoom(nextScale, focus) {
   applyZoomViewBox();
 }
 function resetZoom() {
-  zoomState.scale = 1;
+  zoomState.scale = defaultZoomScale;
   zoomState.centerX = mapSize.width / 2;
   zoomState.centerY = mapSize.height / 2;
   applyZoomViewBox();
