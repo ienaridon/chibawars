@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>関東令和の乱シミュレーター</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="game">
+      <header class="topbar">
+        <div class="brand">
+          <p>関東令和の乱シミュレーター</p>
+          <h1 id="currentDateTitle">2026年4月</h1>
+        </div>
+
+        <section class="top-status" aria-label="勢力">
+          <h2>勢力</h2>
+          <div id="forceCounts" class="force-counts"></div>
+        </section>
+
+        <section class="top-battle" aria-label="バトル">
+          <h2>バトル</h2>
+          <div class="battle-mini">
+            <span>攻撃 <strong id="playerDie">-</strong></span>
+            <span>防衛 <strong id="enemyDie">-</strong></span>
+          </div>
+          <p id="battleText">CPUが隣接自治体を自動で攻撃します。</p>
+        </section>
+
+        <button id="resetButton" type="button">リセット</button>
+      </header>
+
+      <section class="layout">
+        <section class="map-wrap">
+          <div class="zoom-controls" aria-label="地図の拡大縮小">
+            <button id="zoomOutButton" type="button" aria-label="縮小">-</button>
+            <span id="zoomLevel">100%</span>
+            <button id="zoomInButton" type="button" aria-label="拡大">+</button>
+            <button id="zoomResetButton" type="button">100%</button>
+          </div>
+          <svg id="map" class="map" viewBox="0 0 1350 820" role="img" aria-label="関東令和の乱シミュレーションマップ"></svg>
+        </section>
+
+        <aside class="side">
+          <section class="panel history-panel">
+            <h2>履歴</h2>
+            <ol id="captureHistory" class="history"></ol>
+          </section>
+
+          <section class="panel log-panel">
+            <h2>ログ</h2>
+            <ol id="log" class="log"></ol>
+          </section>
+        </aside>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,621 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1420;
+  --panel: #141f2d;
+  --line: rgba(255, 255, 255, 0.18);
+  --text: #f6efe3;
+  --muted: #c9bfad;
+  --player: #3d9be9;
+  --tokyo: #d85a67;
+  --saitama: #d9953f;
+  --ibaraki: #76b85b;
+  --kanagawa: #9a72d9;
+  --enemy: #df5a4f;
+  --neutral: #77818d;
+  --sea: #1d5f82;
+  --sea-block: #1d6f9a;
+  --freshwater: #71c7df;
+  --land: #8b6f45;
+  --other-land: #65706d;
+  --territory-chiba: #3d9be9;
+  --territory-tokyo: #d85a67;
+  --territory-saitama: #d9953f;
+  --territory-ibaraki: #76b85b;
+  --territory-kanagawa: #9a72d9;
+  --gold: #f1c453;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #08111e, #132231);
+  color: var(--text);
+  font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+.game {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 8px;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: minmax(210px, auto) minmax(280px, 1fr) minmax(280px, 1.15fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  background: rgba(11, 20, 32, 0.95);
+}
+
+.topbar p {
+  margin: 0 0 2px;
+  color: var(--gold);
+  font-weight: 800;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: clamp(22px, 3vw, 36px);
+  line-height: 1;
+}
+
+.top-status,
+.top-battle {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 7px 9px;
+}
+
+.top-status h2,
+.top-battle h2 {
+  margin: 0 0 5px;
+  color: var(--gold);
+  font-size: 13px;
+}
+
+.force-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.force-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.16);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.force-count.active {
+  padding: 3px 9px;
+  border-color: rgba(241, 196, 83, 0.85);
+  background: rgba(241, 196, 83, 0.15);
+  box-shadow: 0 0 0 1px rgba(241, 196, 83, 0.22);
+  color: #fff6dc;
+  font-size: 16px;
+}
+
+.force-count::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neutral);
+}
+
+.force-count.chiba::before { background: var(--player); }
+.force-count.tokyo::before { background: var(--tokyo); }
+.force-count.saitama::before { background: var(--saitama); }
+.force-count.ibaraki::before { background: var(--ibaraki); }
+.force-count.kanagawa::before { background: var(--kanagawa); }
+
+.battle-mini {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.battle-mini strong {
+  color: var(--text);
+  font-size: 18px;
+}
+
+.top-battle p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-size: 12px;
+}
+
+h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.topbar button,
+#resetButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(241, 196, 83, 0.7);
+  background: rgba(241, 196, 83, 0.14);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 8px;
+}
+
+.map-wrap {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #0a2637;
+}
+
+.map {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+
+.map.panning {
+  cursor: grabbing;
+}
+
+.zoom-controls {
+  position: absolute;
+  z-index: 5;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(8, 17, 30, 0.82);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.zoom-controls button {
+  width: 34px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.zoom-controls button:hover {
+  background: rgba(241, 196, 83, 0.18);
+  border-color: rgba(241, 196, 83, 0.65);
+}
+
+#zoomLevel {
+  min-width: 48px;
+  text-align: center;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+#zoomResetButton {
+  width: 48px;
+}
+
+.sea {
+  fill: var(--sea);
+}
+
+.cell {
+  stroke: rgba(255, 255, 255, 0.72);
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+
+.town-circle {
+  stroke-width: 1.8;
+}
+
+.cell.player {
+  fill: var(--player);
+}
+
+.cell.chiba {
+  fill: var(--player);
+}
+
+.cell.neutral {
+  fill: var(--neutral);
+}
+
+.cell.tokyo {
+  fill: var(--tokyo);
+}
+
+.cell.saitama {
+  fill: var(--saitama);
+}
+
+.cell.ibaraki {
+  fill: var(--ibaraki);
+}
+
+.cell.kanagawa {
+  fill: var(--kanagawa);
+}
+
+.cell.selectable {
+  filter: brightness(1.18);
+}
+
+.cell.selected {
+  stroke: #fff;
+  stroke-width: 4;
+}
+
+.cell.attackable {
+  stroke: var(--gold);
+  stroke-width: 4;
+  filter: brightness(1.22);
+}
+
+.bridge {
+  pointer-events: none;
+  stroke: rgba(241, 196, 83, 0.48);
+  stroke-dasharray: 5 5;
+  stroke-width: 2;
+}
+
+.access-line {
+  pointer-events: none;
+  stroke: rgba(241, 196, 83, 0.6);
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.cell:hover {
+  filter: brightness(1.12);
+}
+
+.water-cell {
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.035);
+  stroke-width: 0.1;
+}
+
+.water-cell.sea-block {
+  fill: var(--sea-block);
+}
+
+.water-cell.freshwater {
+  fill: var(--freshwater);
+}
+
+.land-cell {
+  pointer-events: none;
+  fill: var(--land);
+  stroke: rgba(255, 255, 255, 0.03);
+  stroke-width: 0.08;
+}
+
+.land-cell.territory-cell {
+  opacity: 0.72;
+  transition: fill 0.18s ease;
+}
+
+.land-cell.owner-chiba {
+  fill: color-mix(in srgb, var(--territory-chiba) 64%, var(--land));
+}
+
+.land-cell.owner-tokyo {
+  fill: color-mix(in srgb, var(--territory-tokyo) 64%, var(--land));
+}
+
+.land-cell.owner-saitama {
+  fill: color-mix(in srgb, var(--territory-saitama) 64%, var(--land));
+}
+
+.land-cell.owner-ibaraki {
+  fill: color-mix(in srgb, var(--territory-ibaraki) 64%, var(--land));
+}
+
+.land-cell.owner-kanagawa {
+  fill: color-mix(in srgb, var(--territory-kanagawa) 64%, var(--land));
+}
+
+.land-cell.settlement-land {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.land-cell.other-land {
+  fill: var(--other-land);
+}
+
+.terrain-shallow,
+.terrain-coast,
+.terrain-lake-edge,
+.terrain-pref-edge {
+  pointer-events: none;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.terrain-shallow {
+  stroke: rgba(122, 210, 230, 0.42);
+  stroke-width: 6;
+}
+
+.terrain-coast {
+  stroke: rgba(244, 236, 208, 0.82);
+  stroke-width: 1.45;
+}
+
+.terrain-lake-edge {
+  stroke: rgba(221, 250, 255, 0.72);
+  stroke-width: 1.2;
+}
+
+.terrain-pref-edge {
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.pref-label,
+.town-label {
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: rgba(6, 14, 24, 0.9);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  fill: white;
+  font-weight: 900;
+}
+
+.pref-boundary {
+  fill: none;
+  pointer-events: none;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+
+.dice-badge {
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #08111e;
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.dice-badge-bg {
+  pointer-events: none;
+  fill: rgba(246, 239, 227, 0.92);
+  stroke: rgba(8, 17, 30, 0.65);
+  stroke-width: 1;
+}
+
+.battle-effect {
+  pointer-events: none;
+}
+
+.battle-effect text {
+  text-anchor: middle;
+  dominant-baseline: middle;
+  font-size: 24px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.85));
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: burn-pop 0.55s ease-in-out infinite alternate;
+}
+
+.pref-label {
+  font-size: 23px;
+}
+
+.town-label {
+  font-size: 10px;
+  opacity: 0;
+}
+
+.town.major .town-label,
+.town.selected .town-label,
+.town.attackable .town-label,
+.town:hover .town-label {
+  opacity: 1;
+}
+
+.map.zoom-labels-medium .town-label.tier-3,
+.map.zoom-labels-medium .town-label.tier-4,
+.map.zoom-labels-full .town-label {
+  opacity: 1;
+}
+
+.town-label.tier-1 {
+  font-size: 8px;
+}
+
+.town-label.tier-2 {
+  font-size: 9px;
+}
+
+.town-label.tier-3 {
+  font-size: 10px;
+}
+
+.town-label.tier-4 {
+  font-size: 11px;
+}
+
+.side {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 10px;
+}
+
+.rules {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.history {
+  max-height: 160px;
+  overflow: hidden;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.history li {
+  margin-bottom: 4px;
+}
+
+.status p,
+.dice-panel p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.dice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dice-row div,
+.score {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 8px;
+}
+
+.dice-row span,
+.score span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dice-row strong {
+  display: block;
+  font-size: 38px;
+  line-height: 1.05;
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.score strong {
+  font-size: 24px;
+}
+
+.log-panel {
+  flex: 1;
+  min-height: 120px;
+}
+
+.log {
+  max-height: 150px;
+  overflow: auto;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.log li {
+  margin-bottom: 8px;
+}
+
+.flash {
+  animation: flash 0.5s ease;
+}
+
+@keyframes flash {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes burn-pop {
+  0% {
+    opacity: 0.82;
+    transform: translateY(0) scale(0.95);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.14);
+  }
+}
+
+@media (max-width: 920px) {
+  .game {
+    height: auto;
+    overflow: auto;
+  }
+
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .map-wrap {
+    min-height: 520px;
+    overflow: auto;
+  }
+}
