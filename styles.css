@@ -32,7 +32,9 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #08111e, #132231);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(71, 109, 133, 0.2), transparent 32%),
+    linear-gradient(135deg, #07101c, #132231 54%, #071421);
   color: var(--text);
   font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", Meiryo, system-ui, sans-serif;
 }
@@ -57,7 +59,8 @@ button {
   gap: 10px;
   padding: 8px 14px;
   border: 1px solid var(--line);
-  background: rgba(11, 20, 32, 0.95);
+  background: linear-gradient(180deg, rgba(22, 36, 53, 0.98), rgba(8, 17, 30, 0.96));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .topbar p {
@@ -81,7 +84,8 @@ h1 {
 .top-battle {
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.055);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 6px 14px rgba(0, 0, 0, 0.18);
   padding: 7px 9px;
 }
 
@@ -180,7 +184,30 @@ h2 {
   min-height: 0;
   overflow: hidden;
   border: 1px solid var(--line);
-  background: #0a2637;
+  background: #082538;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 18px 45px rgba(255, 255, 255, 0.04),
+    inset 0 -28px 55px rgba(0, 0, 0, 0.35),
+    0 16px 36px rgba(0, 0, 0, 0.32);
+}
+
+.map-wrap::before,
+.map-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.map-wrap::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 28%, transparent 70%, rgba(0, 0, 0, 0.18));
+  mix-blend-mode: soft-light;
+}
+
+.map-wrap::after {
+  box-shadow: inset 0 0 72px rgba(0, 0, 0, 0.38);
 }
 
 .map {
@@ -198,7 +225,7 @@ h2 {
 
 .zoom-controls {
   position: absolute;
-  z-index: 5;
+  z-index: 6;
   top: 10px;
   right: 10px;
   display: flex;
@@ -238,13 +265,15 @@ h2 {
 }
 
 .sea {
-  fill: var(--sea);
+  fill: url(#sea-gradient);
 }
 
 .cell {
   stroke: rgba(255, 255, 255, 0.72);
   stroke-width: 1.5;
   cursor: pointer;
+  paint-order: stroke fill;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.52));
 }
 
 .town-circle {
@@ -319,22 +348,22 @@ h2 {
 }
 
 .water-cell.sea-block {
-  fill: var(--sea-block);
+  fill: url(#sea-gradient);
 }
 
 .water-cell.freshwater {
-  fill: var(--freshwater);
+  fill: url(#freshwater-gradient);
 }
 
 .land-cell {
   pointer-events: none;
   fill: var(--land);
-  stroke: rgba(255, 255, 255, 0.03);
+  stroke: rgba(255, 255, 255, 0.08);
   stroke-width: 0.08;
 }
 
 .land-cell.territory-cell {
-  opacity: 0.72;
+  opacity: 0.82;
   transition: fill 0.18s ease;
 }
 
@@ -366,6 +395,19 @@ h2 {
   fill: var(--other-land);
 }
 
+.relief-overlay {
+  pointer-events: none;
+  fill: url(#relief-pattern);
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+}
+
+.relief-line {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1;
+}
+
 .terrain-shallow,
 .terrain-coast,
 .terrain-lake-edge,
@@ -377,13 +419,14 @@ h2 {
 }
 
 .terrain-shallow {
-  stroke: rgba(122, 210, 230, 0.42);
-  stroke-width: 6;
+  stroke: rgba(126, 224, 245, 0.34);
+  stroke-width: 8;
 }
 
 .terrain-coast {
-  stroke: rgba(244, 236, 208, 0.82);
-  stroke-width: 1.45;
+  stroke: rgba(255, 247, 213, 0.9);
+  stroke-width: 1.8;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.38));
 }
 
 .terrain-lake-edge {
@@ -429,9 +472,16 @@ h2 {
 
 .dice-badge-bg {
   pointer-events: none;
-  fill: rgba(246, 239, 227, 0.92);
+  fill: rgba(255, 249, 230, 0.96);
   stroke: rgba(8, 17, 30, 0.65);
   stroke-width: 1;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
+.town-shadow {
+  pointer-events: none;
+  fill: rgba(0, 0, 0, 0.32);
+  stroke: none;
 }
 
 .battle-effect {
