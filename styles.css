@@ -317,6 +317,15 @@ h2 {
   stroke-width: 4;
 }
 
+.cell.capital-cell {
+  stroke: rgba(255, 244, 183, 0.95);
+  stroke-width: 3;
+}
+
+.cell.threatened {
+  animation: capital-danger 0.72s ease-in-out infinite alternate;
+}
+
 .cell.attackable {
   stroke: var(--gold);
   stroke-width: 4;
@@ -335,6 +344,24 @@ h2 {
   stroke: rgba(241, 196, 83, 0.6);
   stroke-linecap: round;
   stroke-width: 1.8;
+}
+
+.action-effect {
+  pointer-events: none;
+  stroke-linecap: round;
+  stroke-width: 5;
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.45));
+}
+
+.attack-line {
+  stroke: rgba(255, 218, 72, 0.92);
+  animation: attack-line-flash 0.72s ease-out forwards;
+}
+
+.move-line {
+  stroke: rgba(140, 230, 255, 0.86);
+  stroke-dasharray: 5 8;
+  animation: move-line-flow 0.72s linear forwards;
 }
 
 .cell:hover {
@@ -385,6 +412,23 @@ h2 {
 
 .land-cell.owner-kanagawa {
   fill: color-mix(in srgb, var(--territory-kanagawa) 64%, var(--land));
+}
+
+.map.turn-pulse-chiba .land-cell.owner-chiba,
+.map.turn-pulse-tokyo .land-cell.owner-tokyo,
+.map.turn-pulse-saitama .land-cell.owner-saitama,
+.map.turn-pulse-ibaraki .land-cell.owner-ibaraki,
+.map.turn-pulse-kanagawa .land-cell.owner-kanagawa {
+  animation: territory-turn-pulse 0.85s ease-out 1;
+}
+
+.map.final-war .land-cell.territory-cell {
+  filter: saturate(1.12) contrast(1.05);
+}
+
+.map.final-war .sea,
+.map.final-war .water-cell {
+  filter: brightness(0.84);
 }
 
 .land-cell.settlement-land {
@@ -484,6 +528,23 @@ h2 {
   stroke: none;
 }
 
+.capital-marker {
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  fill: #fff3a7;
+  stroke: rgba(6, 14, 24, 0.9);
+  stroke-width: 2.5px;
+  paint-order: stroke;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.town.capital-threat .capital-marker {
+  fill: #ff5959;
+  animation: marker-danger 0.72s ease-in-out infinite alternate;
+}
+
 .battle-effect {
   pointer-events: none;
 }
@@ -497,6 +558,22 @@ h2 {
   transform-origin: center;
   animation: burn-pop 0.55s ease-in-out infinite alternate;
 }
+
+.capture-ripple {
+  pointer-events: none;
+  fill: none;
+  stroke-width: 4;
+  opacity: 0.78;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: capture-ripple 0.95s ease-out forwards;
+}
+
+.capture-ripple.owner-chiba { stroke: var(--player); }
+.capture-ripple.owner-tokyo { stroke: var(--tokyo); }
+.capture-ripple.owner-saitama { stroke: var(--saitama); }
+.capture-ripple.owner-ibaraki { stroke: var(--ibaraki); }
+.capture-ripple.owner-kanagawa { stroke: var(--kanagawa); }
 
 .pref-label {
   font-size: 23px;
@@ -632,6 +709,18 @@ h2 {
   margin-bottom: 8px;
 }
 
+.history-item {
+  padding: 3px 6px;
+  border-left: 4px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.history-item.chiba { border-left-color: var(--player); }
+.history-item.tokyo { border-left-color: var(--tokyo); }
+.history-item.saitama { border-left-color: var(--saitama); }
+.history-item.ibaraki { border-left-color: var(--ibaraki); }
+.history-item.kanagawa { border-left-color: var(--kanagawa); }
+
 .flash {
   animation: flash 0.5s ease;
 }
@@ -640,6 +729,87 @@ h2 {
   0% { transform: scale(1); }
   50% { transform: scale(1.04); }
   100% { transform: scale(1); }
+}
+
+@keyframes attack-line-flash {
+  0% {
+    opacity: 0;
+    stroke-width: 1;
+  }
+
+  35% {
+    opacity: 1;
+    stroke-width: 7;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-width: 2;
+  }
+}
+
+@keyframes move-line-flow {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 18;
+  }
+
+  25% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes capture-ripple {
+  0% {
+    opacity: 0.85;
+    stroke-width: 5;
+    transform: scale(0.55);
+  }
+
+  100% {
+    opacity: 0;
+    stroke-width: 1;
+    transform: scale(1.9);
+  }
+}
+
+@keyframes capital-danger {
+  from {
+    stroke: rgba(255, 244, 183, 0.95);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  }
+
+  to {
+    stroke: #ff4c4c;
+    filter: drop-shadow(0 0 8px rgba(255, 52, 52, 0.8));
+  }
+}
+
+@keyframes marker-danger {
+  from { transform: scale(1); }
+  to { transform: scale(1.35); }
+}
+
+@keyframes territory-turn-pulse {
+  0% {
+    opacity: 0.82;
+    filter: brightness(1);
+  }
+
+  45% {
+    opacity: 1;
+    filter: brightness(1.36) saturate(1.2);
+  }
+
+  100% {
+    opacity: 0.82;
+    filter: brightness(1);
+  }
 }
 
 @keyframes burn-pop {

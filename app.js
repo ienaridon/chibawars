@@ -37,7 +37,7 @@ const maxTownDice = 8;
 const maxMovedTownDice = 20;
 const phaseActionLimit = 20;
 const majorTowns = new Set(["千葉市", "船橋市", "松戸市", "柏市", "市川市", "成田市", "銚子市", "館山市", "さいたま市", "川口市", "川越市", "熊谷市", "東京", "新宿区", "渋谷区", "港区", "世田谷区", "大田区", "江戸川区", "横浜市", "川崎市", "相模原市", "横須賀市", "藤沢市", "水戸市", "つくば市", "日立市", "土浦市", "神栖市"]);
-const state = { selectedId: null, playerDie: "-", enemyDie: "-", turn: 1, activeOwner: "chiba", phase: "attack", phaseActions: 0, attackQueue: [], moveQueue: [], passedTownIds: [], running: true, timerId: null, battleEffects: [], captureHistory: [], lastBattle: "観戦モード開始。全勢力CPUで進行します。", logs: ["観戦モード開始。千葉・東京・埼玉・茨城・神奈川のCPU戦です。"] };
+const state = { selectedId: null, playerDie: "-", enemyDie: "-", turn: 1, activeOwner: "chiba", phase: "attack", phaseActions: 0, attackQueue: [], moveQueue: [], passedTownIds: [], running: true, timerId: null, battleEffects: [], turnPulse: { owner: "chiba", ttl: 8 }, captureHistory: [], lastBattle: "観戦モード開始。全勢力CPUで進行します。", logs: ["観戦モード開始。千葉・東京・埼玉・茨城・神奈川のCPU戦です。"] };
 const terrainRows = [
   "SSSSSSSSSSSSSSSSSSSSSSOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLSSSSSSSSSSSSSSSSSSSSSSSSSSSS",
   "SSSSSSSSSSSSSOOSSSSSOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLSSSSSSSSSSSSSSSSSSSSSSSSSSSS",
@@ -3504,23 +3504,44 @@ function appendEdgePath(map, className, segments) {
   if (!segments.length) return;
   map.append(svgEl("path", { class: className, d: segments.join("") }));
 }
-function drawTown(map, town) { const scale = tierScale[town.tier || 1]; const width = tile.w * scale; const height = tile.h * scale; const group = svgEl("g", { class: townGroupClass(town), "data-id": town.id }); const isMajor = isMajorTown(town); const circleRadius = Math.max(7, Math.min(width, height) * 0.42); const shadow = isMajor ? svgEl("rect", { class: "town-shadow", x: -width / 2 + 2, y: -height / 2 + 3, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: "town-shadow", cx: 2, cy: 3, r: circleRadius }); const shape = isMajor ? svgEl("rect", { class: cellClass(town), x: -width / 2, y: -height / 2, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: cellClass(town) + " town-circle", cx: 0, cy: 0, r: circleRadius }); const label = svgEl("text", { class: "town-label tier-" + (town.tier || 1), x: 0, y: 0 }); label.textContent = shortName(town.name); const badgeX = isMajor ? width / 2 - 5 : circleRadius * 0.72; const badgeY = isMajor ? -height / 2 + 5 : -circleRadius * 0.72; const badge = svgEl("circle", { class: "dice-badge-bg", cx: badgeX, cy: badgeY, r: 7 }); const dice = svgEl("text", { class: "dice-badge", x: badgeX, y: badgeY + 0.5 }); group.append(shadow, shape, badge, dice, label); group.addEventListener("click", () => handleTownClick(town.id)); townElementsById.set(town.id, { group, shape, dice }); updateTownElement(town); map.append(group); }
+function drawTown(map, town) { const scale = tierScale[town.tier || 1]; const width = tile.w * scale; const height = tile.h * scale; const group = svgEl("g", { class: townGroupClass(town), "data-id": town.id }); const isMajor = isMajorTown(town); const circleRadius = Math.max(7, Math.min(width, height) * 0.42); const shadow = isMajor ? svgEl("rect", { class: "town-shadow", x: -width / 2 + 2, y: -height / 2 + 3, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: "town-shadow", cx: 2, cy: 3, r: circleRadius }); const shape = isMajor ? svgEl("rect", { class: cellClass(town), x: -width / 2, y: -height / 2, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: cellClass(town) + " town-circle", cx: 0, cy: 0, r: circleRadius }); const label = svgEl("text", { class: "town-label tier-" + (town.tier || 1), x: 0, y: 0 }); label.textContent = shortName(town.name); const capitalMarker = svgEl("text", { class: "capital-marker", x: isMajor ? -width / 2 + 6 : -circleRadius * 0.6, y: isMajor ? -height / 2 + 7 : circleRadius * 0.55 }); capitalMarker.textContent = "★"; const badgeX = isMajor ? width / 2 - 5 : circleRadius * 0.72; const badgeY = isMajor ? -height / 2 + 5 : -circleRadius * 0.72; const badge = svgEl("circle", { class: "dice-badge-bg", cx: badgeX, cy: badgeY, r: 7 }); const dice = svgEl("text", { class: "dice-badge", x: badgeX, y: badgeY + 0.5 }); group.append(shadow, shape, capitalMarker, badge, dice, label); group.addEventListener("click", () => handleTownClick(town.id)); townElementsById.set(town.id, { group, shape, dice, capitalMarker }); updateTownElement(town); map.append(group); }
 function updateTownElement(town) {
   const entry = townElementsById.get(town.id);
   if (!entry) return;
   entry.group.setAttribute("class", townGroupClass(town));
   entry.group.setAttribute("transform", `translate(${town.x} ${town.y}) scale(${1 / zoomState.scale})`);
   entry.shape.setAttribute("class", isMajorTown(town) ? cellClass(town) : `${cellClass(town)} town-circle`);
+  entry.capitalMarker.style.display = isCapitalTown(town) ? "" : "none";
   entry.dice.textContent = townDice(town);
 }
 function addBattleEffect(town) {
-  state.battleEffects.push({ id: town.id, x: town.x, y: town.y, ttl: 10 });
-  if (state.battleEffects.length > 18) state.battleEffects.splice(0, state.battleEffects.length - 18);
+  addEffect({ type: "fire", id: town.id, x: town.x, y: town.y, ttl: 10 });
+}
+function addEffect(effect) {
+  state.battleEffects.push(effect);
+  if (state.battleEffects.length > 36) state.battleEffects.splice(0, state.battleEffects.length - 36);
+}
+function addAttackLineEffect(from, to) {
+  addEffect({ type: "attack-line", x1: from.x, y1: from.y, x2: to.x, y2: to.y, ttl: 8 });
+}
+function addMoveLineEffect(from, to) {
+  addEffect({ type: "move-line", x1: from.x, y1: from.y, x2: to.x, y2: to.y, ttl: 8 });
+}
+function addCaptureRipple(town, owner) {
+  addEffect({ type: "capture-ripple", owner, x: town.x, y: town.y, ttl: 12 });
 }
 function drawBattleEffects(map) {
   map.innerHTML = "";
   state.battleEffects = state.battleEffects.map((effect) => ({ ...effect, ttl: effect.ttl - 1 })).filter((effect) => effect.ttl > 0);
   state.battleEffects.forEach((effect) => {
+    if (effect.type === "attack-line" || effect.type === "move-line") {
+      map.append(svgEl("line", { class: `action-effect ${effect.type}`, x1: effect.x1, y1: effect.y1, x2: effect.x2, y2: effect.y2 }));
+      return;
+    }
+    if (effect.type === "capture-ripple") {
+      map.append(svgEl("circle", { class: `capture-ripple owner-${effect.owner}`, cx: effect.x, cy: effect.y, r: 28 - effect.ttl }));
+      return;
+    }
     const group = svgEl("g", { class: "battle-effect", transform: `translate(${effect.x} ${effect.y}) scale(${1 / zoomState.scale})` });
     const text = svgEl("text", { x: 0, y: -18 });
     text.textContent = "\u{1F525}";
@@ -3553,12 +3574,14 @@ function shortName(name) { if (name.endsWith("\u5e02") && name.length <= 3) retu
 function townDiceLimit(town) { return Math.min(maxTownDice, Math.max(1, diceByTier[town.tier || 1])); }
 function townDice(town) { return town.currentDice || townDiceLimit(town); }
 function isMajorTown(town) { return majorTowns.has(town.name) || town.tier >= 4; }
-function townGroupClass(town) { const classes = ["town"]; if (isMajorTown(town)) classes.push("major"); if (state.selectedId === town.id) classes.push("selected"); if (town.owner === state.activeOwner) classes.push("selectable"); return classes.join(" "); }
-function cellClass(town) { const classes = ["cell", ownerColor(town.owner)]; if (state.selectedId === town.id) classes.push("selected"); if (town.owner === state.activeOwner) classes.push("selectable"); return classes.join(" "); }
+function townGroupClass(town) { const classes = ["town"]; if (isMajorTown(town)) classes.push("major"); if (isCapitalTown(town)) classes.push("capital"); if (isCapitalThreatened(town)) classes.push("capital-threat"); if (state.selectedId === town.id) classes.push("selected"); if (town.owner === state.activeOwner) classes.push("selectable"); return classes.join(" "); }
+function cellClass(town) { const classes = ["cell", ownerColor(town.owner)]; if (isCapitalTown(town)) classes.push("capital-cell"); if (isCapitalThreatened(town)) classes.push("threatened"); if (state.selectedId === town.id) classes.push("selected"); if (town.owner === state.activeOwner) classes.push("selectable"); return classes.join(" "); }
 function ownerColor(owner) { return owner === "chiba" ? "chiba" : prefMeta[owner]?.color || "neutral"; }
 function ownerLabel(owner) { return prefMeta[owner]?.label || owner; }
 function ownerRegionLabel(owner) { return owner === "tokyo" ? "\u6771\u4eac\u90fd" : `${ownerLabel(owner)}\u770c`; }
 function capitalTown(owner) { return townByName(capitalTowns[owner]); }
+function isCapitalTown(town) { return capitalTowns[town.owner] === town.name; }
+function isCapitalThreatened(town) { return isCapitalTown(town) && neighborTowns(town).some((neighbor) => neighbor.owner !== town.owner); }
 function neighborTowns(town) { return adjacencyById.get(town.id) || []; }
 function graphDistance(from, to, maxDepth = 5) {
   if (!from || !to) return Infinity;
@@ -3622,6 +3645,7 @@ function enemyCapitalPathScore(town, owner) {
 function handleTownClick(id) { state.selectedId = id; render(); }
 function battle(attacker, defender) {
   addBattleEffect(defender);
+  addAttackLineEffect(attacker, defender);
   const attackDice = Math.max(1, townDice(attacker) - 1);
   const defendDice = Math.max(1, townDice(defender));
   const attackRoll = rollDice(attackDice);
@@ -3635,9 +3659,9 @@ function battle(attacker, defender) {
     defender.owner = attackerOwner;
     defender.currentDice = Math.max(1, Math.min(maxMovedTownDice, attackDice));
     updateTerritoryForTown(defender);
+    addCaptureRipple(defender, attackerOwner);
     state.selectedId = defender.id;
-    state.captureHistory.push(`${currentMonthLabel()} ${defender.name}は、${ownerRegionLabel(attackerOwner)}になった。`);
-    if (state.captureHistory.length > 12) state.captureHistory.splice(0, state.captureHistory.length - 12);
+    addCaptureHistory(`${currentMonthLabel()} ${defender.name}は、${ownerRegionLabel(attackerOwner)}になった。`, attackerOwner);
     state.lastBattle = `${ownerLabel(attackerOwner)} ${attacker.name} → ${ownerLabel(defenderOwner)} ${defender.name}: ${attackRoll.total}-${defendRoll.total}で占領`;
     state.logs.push(state.lastBattle);
     playSound("attackSuccess");
@@ -3692,11 +3716,11 @@ function checkCapitalSurrender(defeatedOwner, conquerorOwner) {
     town.owner = conquerorOwner;
     town.currentDice = Math.max(1, Math.min(townDice(town), maxMovedTownDice));
     updateTerritoryForTown(town);
-    state.captureHistory.push(`${currentMonthLabel()} ${town.name}は、${ownerRegionLabel(conquerorOwner)}になった。`);
+    addCaptureRipple(town, conquerorOwner);
+    addCaptureHistory(`${currentMonthLabel()} ${town.name}は、${ownerRegionLabel(conquerorOwner)}になった。`, conquerorOwner);
   });
   state.logs.push(`${ownerLabel(defeatedOwner)}は${capital.name}を失い、${ownerLabel(conquerorOwner)}に降伏した。`);
   state.lastBattle = `${ownerLabel(defeatedOwner)}は${capital.name}を失い、${ownerLabel(conquerorOwner)}に降伏した。`;
-  if (state.captureHistory.length > 12) state.captureHistory.splice(0, state.captureHistory.length - 12);
 }
 function nextOwnedQueuedTown(queue) {
   while (queue.length) {
@@ -3789,6 +3813,7 @@ function endCpuTurn() {
   const previous = state.activeOwner;
   const ownersBeforeSwitch = livingOwners();
   state.activeOwner = nextOwner(state.activeOwner);
+  state.turnPulse = { owner: state.activeOwner, ttl: 8 };
   state.phase = "attack";
   state.phaseActions = 0;
   state.attackQueue = attackQueueForOwner(state.activeOwner);
@@ -3817,10 +3842,15 @@ function moveDiceFromTown(from) {
   if (amount <= 0) return false;
   move.from.currentDice -= amount;
   move.to.currentDice += amount;
+  addMoveLineEffect(move.from, move.to);
   state.selectedId = move.to.id;
   state.lastBattle = `${ownerLabel(from.owner)}\u304c${move.from.name}\u304b\u3089${move.to.name}\u3078\u5175\u529b${amount}\u3092\u79fb\u52d5\u3002`;
   state.logs.push(state.lastBattle);
   return true;
+}
+function addCaptureHistory(text, owner) {
+  state.captureHistory.push({ text, owner });
+  if (state.captureHistory.length > 12) state.captureHistory.splice(0, state.captureHistory.length - 12);
 }
 function diceMoveOptions(from) {
   const owner = from.owner;
@@ -3847,7 +3877,14 @@ function scheduleCpuStep() {
   if (state.running && !winnerOwner()) state.timerId = setTimeout(runCpuStep, 100);
 }
 function rollDice(count) { const rolls = Array.from({ length: count }, () => Math.floor(Math.random() * 6) + 1); return { rolls, total: rolls.reduce((sum, value) => sum + value, 0) }; }
-function render() { if (!mapLayers.base) drawMap(); else { updateTownLayer(); applyZoomViewBox(); } const dateTitle = document.querySelector("#currentDateTitle"); if (dateTitle) dateTitle.textContent = currentMonthLabel(); const playerDie = document.querySelector("#playerDie"); if (playerDie) playerDie.textContent = state.playerDie; const enemyDie = document.querySelector("#enemyDie"); if (enemyDie) enemyDie.textContent = state.enemyDie; renderForceCounts(); renderBattleText(); renderCaptureHistory(); renderLog(); }
+function render() { updateVisualStateClasses(); if (!mapLayers.base) drawMap(); else { updateTownLayer(); applyZoomViewBox(); } const dateTitle = document.querySelector("#currentDateTitle"); if (dateTitle) dateTitle.textContent = currentMonthLabel(); const playerDie = document.querySelector("#playerDie"); if (playerDie) playerDie.textContent = state.playerDie; const enemyDie = document.querySelector("#enemyDie"); if (enemyDie) enemyDie.textContent = state.enemyDie; renderForceCounts(); renderBattleText(); renderCaptureHistory(); renderLog(); if (state.turnPulse.ttl > 0) state.turnPulse.ttl -= 1; }
+function updateVisualStateClasses() {
+  const map = document.querySelector("#map");
+  if (map) {
+    map.classList.toggle("final-war", livingOwners().length === 2);
+    Object.keys(prefMeta).forEach((owner) => map.classList.toggle(`turn-pulse-${owner}`, state.turnPulse.ttl > 0 && state.turnPulse.owner === owner));
+  }
+}
 function ownerCounts() { return towns.reduce((counts, town) => { counts[town.owner] = (counts[town.owner] || 0) + 1; return counts; }, {}); }
 function renderForceCounts() {
   const container = document.querySelector("#forceCounts");
@@ -3869,6 +3906,6 @@ function currentMonthLabel() {
 }
 function renderBattleText() { const text = document.querySelector("#battleText"); const winner = winnerOwner(); if (winner) text.textContent = `${currentMonthLabel()}。${ownerLabel(winner)}が全自治体を制圧しました。`; else text.textContent = `${currentMonthLabel()} ${state.lastBattle}`; }
 function renderLog() { const log = document.querySelector("#log"); log.innerHTML = ""; state.logs.slice(-8).reverse().forEach((entry) => { const li = document.createElement("li"); li.textContent = entry; log.append(li); }); }
-function renderCaptureHistory() { const history = document.querySelector("#captureHistory"); if (!history) return; history.innerHTML = ""; state.captureHistory.slice(-12).reverse().forEach((entry) => { const li = document.createElement("li"); li.textContent = entry; history.append(li); }); }
-function resetGame() { clearTimeout(state.timerId); towns.forEach((town) => { town.owner = prefMeta[town.group].owner; town.currentDice = town.maxDice; }); updateAllTerritoryColors(); state.selectedId = null; state.playerDie = "-"; state.enemyDie = "-"; state.turn = 1; state.activeOwner = "chiba"; state.phase = "attack"; state.phaseActions = 0; state.attackQueue = attackQueueForOwner(state.activeOwner); state.moveQueue = []; state.passedTownIds = []; state.running = true; state.captureHistory = []; state.lastBattle = "観戦モード開始。全勢力CPUで進行します。"; state.logs = ["観戦モード開始。千葉・東京・埼玉・茨城・神奈川のCPU戦です。"]; playSound("attackPhase"); render(); scheduleCpuStep(); }
+function renderCaptureHistory() { const history = document.querySelector("#captureHistory"); if (!history) return; history.innerHTML = ""; state.captureHistory.slice(-12).reverse().forEach((entry) => { const item = typeof entry === "string" ? { text: entry, owner: "" } : entry; const li = document.createElement("li"); li.className = item.owner ? `history-item ${item.owner}` : "history-item"; li.textContent = item.text; history.append(li); }); }
+function resetGame() { clearTimeout(state.timerId); towns.forEach((town) => { town.owner = prefMeta[town.group].owner; town.currentDice = town.maxDice; }); updateAllTerritoryColors(); state.selectedId = null; state.playerDie = "-"; state.enemyDie = "-"; state.turn = 1; state.activeOwner = "chiba"; state.phase = "attack"; state.phaseActions = 0; state.attackQueue = attackQueueForOwner(state.activeOwner); state.moveQueue = []; state.passedTownIds = []; state.running = true; state.turnPulse = { owner: "chiba", ttl: 8 }; state.battleEffects = []; state.captureHistory = []; state.lastBattle = "観戦モード開始。全勢力CPUで進行します。"; state.logs = ["観戦モード開始。千葉・東京・埼玉・茨城・神奈川のCPU戦です。"]; playSound("attackPhase"); render(); scheduleCpuStep(); }
 document.querySelector("#resetButton").addEventListener("click", resetGame); setupSounds(); setupZoomControls(); render(); playSound("attackPhase"); scheduleCpuStep();
