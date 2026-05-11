@@ -5,9 +5,11 @@ const mapSize = { width: 1350, height: 820 };
 const defaultZoomScale = 1.56;
 const zoomLimits = { min: 1, max: 3 };
 const zoomState = { scale: defaultZoomScale, centerX: mapSize.width / 2, centerY: mapSize.height / 2, dragging: false, dragStart: null };
-const mapLayers = { base: null, towns: null };
+const cpuActionsPerFrame = 5;
+const mapLayers = { base: null, towns: null, bridge: null, access: null, townTiles: null, effects: null };
 const graphDistanceCache = new Map();
 const terrainCellsByTownId = new Map();
+const townElementsById = new Map();
 const soundFiles = {
   attackPhase: "bgm/剣で斬る2.mp3",
   attackSuccess: "bgm/爆発1.mp3",
@@ -3334,6 +3336,7 @@ function resetZoom() {
   zoomState.scale = defaultZoomScale;
   zoomState.centerX = mapSize.width / 2;
   zoomState.centerY = mapSize.height / 2;
+  updateTownLayer();
   applyZoomViewBox();
 }
 function panZoom(deltaX, deltaY) {
@@ -3408,7 +3411,7 @@ function playSound(key) {
   audio.currentTime = 0;
   audio.play().catch(() => {});
 }
-function drawMap() { const map = document.querySelector("#map"); map.innerHTML = ""; drawSvgDefs(map); mapLayers.base = svgEl("g"); mapLayers.towns = svgEl("g"); map.append(mapLayers.base, mapLayers.towns); drawBaseLayer(); updateTownLayer(); applyZoomViewBox(); }
+function drawMap() { const map = document.querySelector("#map"); map.innerHTML = ""; townElementsById.clear(); drawSvgDefs(map); mapLayers.base = svgEl("g"); mapLayers.towns = svgEl("g"); mapLayers.bridge = svgEl("g"); mapLayers.access = svgEl("g"); mapLayers.townTiles = svgEl("g"); mapLayers.effects = svgEl("g"); mapLayers.towns.append(mapLayers.bridge, mapLayers.access, mapLayers.townTiles, mapLayers.effects); map.append(mapLayers.base, mapLayers.towns); drawBaseLayer(); updateTownLayer(true); applyZoomViewBox(); }
 function drawSvgDefs(map) {
   const defs = svgEl("defs");
   const seaGradient = svgEl("linearGradient", { id: "sea-gradient", x1: "0%", y1: "0%", x2: "100%", y2: "100%" });
@@ -3421,7 +3424,24 @@ function drawSvgDefs(map) {
   map.append(defs);
 }
 function drawBaseLayer() { mapLayers.base.innerHTML = ""; terrainCellsByTownId.clear(); mapLayers.base.append(svgEl("rect", { class: "sea", x: 0, y: 0, width: mapSize.width, height: mapSize.height })); const layer = svgEl("g", { transform: `translate(${mapOffset.x} ${mapOffset.y})` }); mapLayers.base.append(layer); drawTerrain(layer); layer.append(svgEl("rect", { class: "relief-overlay", x: 0, y: 0, width: mapSize.width, height: mapSize.height })); addPrefLabel(layer, "埼玉", geoToX(139.38), geoToY(36.05)); addPrefLabel(layer, "東京", geoToX(139.70), geoToY(35.70)); addPrefLabel(layer, "茨城", geoToX(140.38), geoToY(36.32)); addPrefLabel(layer, "神奈川", geoToX(139.38), geoToY(35.43)); addPrefLabel(layer, "千葉", geoToX(140.15), geoToY(35.57)); addPrefLabel(layer, "東京湾", geoToX(139.85), geoToY(35.43), "water"); }
-function updateTownLayer() { if (!mapLayers.towns) return; mapLayers.towns.innerHTML = ""; const layer = svgEl("g", { transform: `translate(${mapOffset.x} ${mapOffset.y})` }); mapLayers.towns.append(layer); drawBridgeLines(layer); drawAccessLines(layer); towns.forEach((town) => drawTown(layer, town)); drawBattleEffects(layer); }
+function updateTownLayer(forceBuild = false) {
+  if (!mapLayers.towns) return;
+  const transform = `translate(${mapOffset.x} ${mapOffset.y})`;
+  mapLayers.bridge.setAttribute("transform", transform);
+  mapLayers.access.setAttribute("transform", transform);
+  mapLayers.townTiles.setAttribute("transform", transform);
+  mapLayers.effects.setAttribute("transform", transform);
+  if (forceBuild || !townElementsById.size) {
+    mapLayers.bridge.innerHTML = "";
+    mapLayers.townTiles.innerHTML = "";
+    townElementsById.clear();
+    drawBridgeLines(mapLayers.bridge);
+    towns.forEach((town) => drawTown(mapLayers.townTiles, town));
+  }
+  drawAccessLines(mapLayers.access);
+  towns.forEach((town) => updateTownElement(town));
+  drawBattleEffects(mapLayers.effects);
+}
 function drawTerrain(map) { const rows = terrainRows.length; const cols = terrainRows[0]?.length || 0; for (let row = 0; row < rows; row += 1) for (let col = 0; col < cols; col += 1) { const kind = terrainKindAt(col, row); const className = kind === "land" ? "land-cell territory-cell" : kind === "other-land" ? "land-cell other-land" : "water-cell " + kind; drawTerrainBlock(map, className, col, row, kind); } drawTerrainEdges(map); }
 function drawTerrainBlock(map, className, col, row, kind) {
   const rect = svgEl("rect", { class: className, x: col * terrainTile.w, y: row * terrainTile.h, width: terrainTile.w, height: terrainTile.h, rx: 1 });
@@ -3484,12 +3504,21 @@ function appendEdgePath(map, className, segments) {
   if (!segments.length) return;
   map.append(svgEl("path", { class: className, d: segments.join("") }));
 }
-function drawTown(map, town) { const scale = tierScale[town.tier || 1]; const inverseZoom = 1 / zoomState.scale; const width = tile.w * scale; const height = tile.h * scale; const group = svgEl("g", { class: townGroupClass(town), "data-id": town.id, transform: `translate(${town.x} ${town.y}) scale(${inverseZoom})` }); const isMajor = isMajorTown(town); const circleRadius = Math.max(7, Math.min(width, height) * 0.42); const shadow = isMajor ? svgEl("rect", { class: "town-shadow", x: -width / 2 + 2, y: -height / 2 + 3, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: "town-shadow", cx: 2, cy: 3, r: circleRadius }); const shape = isMajor ? svgEl("rect", { class: cellClass(town), x: -width / 2, y: -height / 2, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: cellClass(town) + " town-circle", cx: 0, cy: 0, r: circleRadius }); const label = svgEl("text", { class: "town-label tier-" + (town.tier || 1), x: 0, y: 0 }); label.textContent = shortName(town.name); const badgeX = isMajor ? width / 2 - 5 : circleRadius * 0.72; const badgeY = isMajor ? -height / 2 + 5 : -circleRadius * 0.72; const badge = svgEl("circle", { class: "dice-badge-bg", cx: badgeX, cy: badgeY, r: 7 }); const dice = svgEl("text", { class: "dice-badge", x: badgeX, y: badgeY + 0.5 }); dice.textContent = townDice(town); group.append(shadow, shape, badge, dice, label); group.addEventListener("click", () => handleTownClick(town.id)); map.append(group); }
+function drawTown(map, town) { const scale = tierScale[town.tier || 1]; const width = tile.w * scale; const height = tile.h * scale; const group = svgEl("g", { class: townGroupClass(town), "data-id": town.id }); const isMajor = isMajorTown(town); const circleRadius = Math.max(7, Math.min(width, height) * 0.42); const shadow = isMajor ? svgEl("rect", { class: "town-shadow", x: -width / 2 + 2, y: -height / 2 + 3, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: "town-shadow", cx: 2, cy: 3, r: circleRadius }); const shape = isMajor ? svgEl("rect", { class: cellClass(town), x: -width / 2, y: -height / 2, width, height, rx: Math.max(2, 3 * scale) }) : svgEl("circle", { class: cellClass(town) + " town-circle", cx: 0, cy: 0, r: circleRadius }); const label = svgEl("text", { class: "town-label tier-" + (town.tier || 1), x: 0, y: 0 }); label.textContent = shortName(town.name); const badgeX = isMajor ? width / 2 - 5 : circleRadius * 0.72; const badgeY = isMajor ? -height / 2 + 5 : -circleRadius * 0.72; const badge = svgEl("circle", { class: "dice-badge-bg", cx: badgeX, cy: badgeY, r: 7 }); const dice = svgEl("text", { class: "dice-badge", x: badgeX, y: badgeY + 0.5 }); group.append(shadow, shape, badge, dice, label); group.addEventListener("click", () => handleTownClick(town.id)); townElementsById.set(town.id, { group, shape, dice }); updateTownElement(town); map.append(group); }
+function updateTownElement(town) {
+  const entry = townElementsById.get(town.id);
+  if (!entry) return;
+  entry.group.setAttribute("class", townGroupClass(town));
+  entry.group.setAttribute("transform", `translate(${town.x} ${town.y}) scale(${1 / zoomState.scale})`);
+  entry.shape.setAttribute("class", isMajorTown(town) ? cellClass(town) : `${cellClass(town)} town-circle`);
+  entry.dice.textContent = townDice(town);
+}
 function addBattleEffect(town) {
   state.battleEffects.push({ id: town.id, x: town.x, y: town.y, ttl: 10 });
   if (state.battleEffects.length > 18) state.battleEffects.splice(0, state.battleEffects.length - 18);
 }
 function drawBattleEffects(map) {
+  map.innerHTML = "";
   state.battleEffects = state.battleEffects.map((effect) => ({ ...effect, ttl: effect.ttl - 1 })).filter((effect) => effect.ttl > 0);
   state.battleEffects.forEach((effect) => {
     const group = svgEl("g", { class: "battle-effect", transform: `translate(${effect.x} ${effect.y}) scale(${1 / zoomState.scale})` });
@@ -3501,6 +3530,7 @@ function drawBattleEffects(map) {
 }
 function drawBridgeLines(map) { explicitLinks.forEach(([aName, bName]) => { const a = townByName(aName); const b = townByName(bName); if (!a || !b) return; map.append(svgEl("line", { class: "bridge", x1: a.x, y1: a.y, x2: b.x, y2: b.y })); }); }
 function drawAccessLines(map) {
+  map.innerHTML = "";
   adjacencyLinks.forEach(([aName, bName]) => {
     const a = townByName(aName);
     const b = townByName(bName);
@@ -3694,12 +3724,15 @@ function moveTownPriority(town) {
   return (bestMove?.score || 0) + ownCapitalDefenseScore(town, town.owner) + Math.random();
 }
 function runCpuStep() {
+  for (let i = 0; i < cpuActionsPerFrame && state.running && !winnerOwner(); i += 1) runCpuAction();
+  render();
+  scheduleCpuStep();
+}
+function runCpuAction() {
   if (!state.running || winnerOwner()) return;
   ensurePhaseQueues();
   if (state.phase === "attack") runAttackPhaseStep();
   else runMovePhaseStep();
-  render();
-  scheduleCpuStep();
 }
 function ensurePhaseQueues() {
   if (state.phase === "attack" && !state.attackQueue.length && !state.moveQueue.length && !state.passedTownIds.length) {
